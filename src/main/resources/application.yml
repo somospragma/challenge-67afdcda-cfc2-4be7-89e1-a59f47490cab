@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: eventos-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/eventos_db
+    username: eventos_user
+    password: eventos_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    show-sql: false
+
+server:
+  port: 8080
+  netty:
+    connection-timeout: 10000
+    idle-timeout: 30000
+
+# Configuración de Reactor
+reactor:
+  scheduler:
+    event-loop-threads: 4
+
+# Configuración de Resilience4j
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: TIME_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      eventoProcessor:
+        baseConfig: default
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 100ms
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+    instances:
+      eventoProcessor:
+        baseConfig: default
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 25ms
+    instances:
+      eventoProcessor:
+        baseConfig: default
+
+logging:
+  level:
+    root: INFO
+    com.pragma.eventos: DEBUG
+    reactor.netty: INFO
+    org.springframework.web: INFO
+    org.hibernate: ERROR
